@@ -11,14 +11,16 @@ FACT_ELEMENTS = {
     "us-gaap:InvestmentInterestRate": "interest_rate",
     "us-gaap:InvestmentInterestRatePaidInKind": "pik_rate",
 }
-# One investment = one context whose only dimension is this typed axis.
-# Member text is "<issuer> | <instrument>[ n]" (ARCC; format differs per BDC).
-# Keep only members with both fair value and cost: FV-only members are issuer
-# subtotals from the affiliate rollforward tables and double count.
+# One investment = one context whose only dimension is this typed axis, with both fair value
+# and cost, whose FV fact sits on a dated HTML SOI row (that drops issuer subtotals).
+# Member text is NOT reliable for borrower/instrument (mislabeled in older filings);
+# transform.py takes those from the HTML row instead.
 INVESTMENT_AXIS = "us-gaap:InvestmentIdentifierAxis"
+# ARCC 2025-03-31/2025-06-30 tag a few SOI line items on this axis instead (same axis also holds issuer subtotals).
+ISSUER_AXIS = "us-gaap:InvestmentIssuerNameAxis"
 
-# Maturity date is NOT tagged in XBRL by any of the 5 BDCs. For ARCC it, industry,
-# and reference rate come from the HTML Schedule of Investments: each <tr> carries
+# Maturity date is NOT tagged in XBRL by any of the 5 BDCs. For ARCC it, industry, borrower,
+# instrument and reference rate come from the HTML Schedule of Investments: each <tr> carries
 # ix:nonFraction contextRefs; industry = preceding bold single-cell row;
 # maturity = second MM/YYYY cell (first is acquisition date).
 INDUSTRY_AXIS = "us-gaap:EquitySecuritiesByIndustryAxis"  # FV subtotals per industry, no loan link

@@ -25,11 +25,19 @@ CLAUDE.md, config.py, extract.py, transform.py, load.py, valuation.py, run.py,
 sql/schema.sql, sql/recon.sql, sql/views.sql, data/raw/, data/clean/,
 requirements.txt, .gitignore, README.md
 
+## Scope
+- Build the full pipeline end to end on ARCC first, then add GBDC, then MAIN.
+  FSK and OBDC are optional. One BDC at a time.
+- Spread is the key metric; coupon (interest rate) is optional.
+- Snowflake env vars are intentionally not set in the cloud environment. Phases 2-3
+  don't need them; the user loads data/clean/*.csv into Snowflake from a laptop.
+- data/raw/ is gitignored, but data/clean/*.csv IS committed (needed for the Phase 4 load).
+
 ## Phases
 0. Setup (done)
 1. Discovery (done; findings below and in config.py)
-2. Extract
-3. Transform
+2. Extract (done for ARCC: extract.py -> data/raw/ARCC/{period_end}.xml/.htm)
+3. Transform (done for ARCC: transform.py -> data/clean/loans.csv, reported_totals.csv)
 4. Snowflake load
 5. Reconciliation
 6. Valuation
@@ -49,3 +57,15 @@ requirements.txt, .gitignore, README.md
   rate come from the HTML SOI rows, joined on contextRef.
 - Lien type only exists in member text / HTML instrument column.
 - Each filing has two balance dates (current quarter-end and prior year-end).
+
+## Transform findings (ARCC, 8 periods 2024-09-30 .. 2026-06-30)
+- Investment = InvestmentIdentifierAxis (or, in 2 filings, InvestmentIssuerNameAxis) context
+  with FV and cost whose FV fact sits on a dated HTML SOI row. FV+cost alone is not enough:
+  the 10-Ks and 2025 10-Qs tag some issuer subtotals with cost. Reconciles exactly in 7 of 8
+  periods; 2025-03-31 is short $2.3M (one row whose cost is tagged on another context).
+- Borrower and instrument come from the HTML row, not member text: older members use ",",
+  no separator, or are mislabeled (wrong instrument or even wrong issuer vs the row's facts).
+- Loans without spread are fixed-rate, PIK-only fixed, non-accrual (no coupon shown) or
+  $0 unfunded commitments.
+- Industry names change across periods (GICS reclassification, e.g. "Health Care Services"
+  -> "Health Care Equipment and Services"); map them in SQL if needed.
